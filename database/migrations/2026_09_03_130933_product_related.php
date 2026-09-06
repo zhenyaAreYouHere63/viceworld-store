@@ -4,12 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('product_related', function (Blueprint $table) {
             $table->ulid('product_id');
             $table->ulid('related_product_id');
+            $table->unsignedInteger('position')->default(0);
 
             $table->primary(['product_id', 'related_product_id']);
         });

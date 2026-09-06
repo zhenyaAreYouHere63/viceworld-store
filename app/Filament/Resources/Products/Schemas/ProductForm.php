@@ -109,23 +109,30 @@ class ProductForm
 
                 Select::make('related')
                     ->label('Related products')
-                    ->relationship('related', 'id', fn($query, ?Product $record) => $query
+                    ->relationship('related', 'id', fn ($query, ?Product $record) => $query
                         ->with('mediaFiles')
-                        ->when($record, fn($query) => $query->where('id', '!=', $record->id)))
+                        ->when($record, fn ($query) => $query->where('id', '!=', $record->id)))
                     ->getSearchResultsUsing(function (string $search, ?Product $record) {
                         return Product::query()
                             ->with('mediaFiles')
-                            ->when($record, fn($q) => $q->where('id', '!=', $record->id))
-                            ->whereHas('translations', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                            ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                            ->whereHas('translations', fn ($q) => $q->where('name', 'like', "%{$search}%"))
                             ->limit(50)
                             ->get()
-                            ->mapWithKeys(fn(Product $product) => [
+                            ->mapWithKeys(fn (Product $product) => [
                                 $product->id => self::relatedOptionLabel($product),
                             ]);
                     })
-                    ->getOptionLabelFromRecordUsing(fn(Product $product) => self::relatedOptionLabel($product))
+                    ->getOptionLabelFromRecordUsing(fn (Product $product) => self::relatedOptionLabel($product))
                     ->allowHtml()
                     ->multiple()
+                    ->reorderable()
+                    ->saveRelationshipsUsing(function (Select $component, Product $record, ?array $state) {
+                        return $record->related()->sync(
+                            collect($state ?? [])
+                                ->mapWithKeys(fn ($id, $index) => [$id => ['position' => $index]]
+                                ));
+                    })
                     ->preload()
                     ->searchable(),
 
@@ -137,12 +144,12 @@ class ProductForm
 
     public static function relatedOptionLabel(Product $product): string
     {
-        $thumbnail = $product->mediaFiles->first(fn($media) => $media->pivot->collection == 'main_image')?->url;
+        $thumbnail = $product->mediaFiles->first(fn ($media) => $media->pivot->collection == 'main_image')?->url;
 
         $name = e($product->translated('name'));
 
         return $thumbnail
-            ? '<div class="flex items-center gap-2"><img src="' . e($thumbnail) . '" class="w-8 h-8 object-cover rounded">' . $name .
+            ? '<div class="flex items-center gap-2"><img src="'.e($thumbnail).'" class="w-8 h-8 object-cover rounded">'.$name.
             '</div>'
             : $name;
     }
